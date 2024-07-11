@@ -41,3 +41,30 @@ def winning_move(board, piece):
                 return True
     return False
 
+def switch_player(current_player):
+    return 'O' if current_player == 'X' else 'X'
+
+def play_game():
+    board = create_board()
+    game_over = False
+    current_player = 'X'
+
+    while not game_over:
+        print_board(board)
+        col = int(input(f"Player {current_player}, make your selection (0-6): "))
+
+        if is_valid_location(board, col):
+            row = get_next_open_row(board, col)
+            drop_piece(board, row, col, current_player)
+
+            if winning_move(board, current_player):
+                print_board(board)
+                print(f"Player {current_player} wins!")
+                game_over = True
+            else:
+                current_player = switch_player(current_player)
+        else:
+            print("Invalid selection. Try again.")
+
+if __name__ == "__main__":
+    play_game()
