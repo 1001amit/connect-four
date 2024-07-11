@@ -68,3 +68,33 @@ def play_game():
 
 if __name__ == "__main__":
     play_game()
+def play_game():
+    board = create_board()
+    game_over = False
+    current_player = 'X'
+
+    while not game_over:
+        print_board(board)
+        try:
+            col = int(input(f"Player {current_player}, make your selection (0-6): "))
+            if col < 0 or col > 6:
+                raise ValueError
+        except ValueError:
+            print("Invalid input. Please enter a number between 0 and 6.")
+            continue
+
+        if is_valid_location(board, col):
+            row = get_next_open_row(board, col)
+            drop_piece(board, row, col, current_player)
+
+            if winning_move(board, current_player):
+                print_board(board)
+                print(f"Player {current_player} wins!")
+                game_over = True
+            else:
+                current_player = switch_player(current_player)
+        else:
+            print("Invalid selection. Column is full. Try again.")
+
+if __name__ == "__main__":
+    play_game()
