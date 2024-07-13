@@ -14,9 +14,21 @@ class ConnectFour:
         self.root.title("Connect Four")
         self.board = self.create_board()
         self.current_player = PLAYER1
+        self.move_history = []  # To track the moves made for undo functionality
+        self.rounds = 1
+        self.score = {PLAYER1: 0, PLAYER2: 0}
         self.buttons = []
         self.create_widgets()
         self.root.bind("<Configure>", self.on_resize)
+
+        # Bind keyboard keys for column selection
+        self.root.bind("1", lambda event: self.handle_click(0))
+        self.root.bind("2", lambda event: self.handle_click(1))
+        self.root.bind("3", lambda event: self.handle_click(2))
+        self.root.bind("4", lambda event: self.handle_click(3))
+        self.root.bind("5", lambda event: self.handle_click(4))
+        self.root.bind("6", lambda event: self.handle_click(5))
+        self.root.bind("7", lambda event: self.handle_click(6))
 
     def create_board(self):
         return [[EMPTY for _ in range(COLS)] for _ in range(ROWS)]
@@ -28,9 +40,17 @@ class ConnectFour:
 
         # Create buttons for each column
         for col in range(COLS):
-            button = tk.Button(self.frame, text=str(col), command=lambda c=col: self.handle_click(c))
+            button = tk.Button(self.frame, text=str(col + 1), command=lambda c=col: self.handle_click(c))
             button.grid(row=0, column=col, sticky=tk.NSEW)
             self.buttons.append(button)
+
+        # Create an undo button
+        undo_button = tk.Button(self.frame, text="Undo", command=self.undo_move)
+        undo_button.grid(row=0, column=COLS, sticky=tk.NSEW)
+
+        # Create a label to display the round number and score
+        self.round_label = tk.Label(self.frame, text=f"Round: {self.rounds} | {PLAYER1}: {self.score[PLAYER1]} | {PLAYER2}: {self.score[PLAYER2]}")
+        self.round_label.grid(row=0, column=COLS+1, sticky=tk.NSEW)
 
         # Create labels for the board cells
         self.labels = [[None for _ in range(COLS)] for _ in range(ROWS)]
@@ -41,23 +61,25 @@ class ConnectFour:
                 self.labels[row][col] = label
 
         # Set grid weights to make widgets resize with window
-        for col in range(COLS):
+        for col in range(COLS + 2):  # +2 for the undo button and round label
             self.frame.grid_columnconfigure(col, weight=1)
-        for row in range(ROWS+1):  # +1 for the row of buttons
+        for row in range(ROWS + 1):  # +1 for the row of buttons
             self.frame.grid_rowconfigure(row, weight=1)
 
     def handle_click(self, col):
         if self.is_valid_location(col):
             row = self.get_next_open_row(col)
             self.drop_piece(row, col, self.current_player)
+            self.move_history.append((row, col, self.current_player))  # Track the move
             self.update_board()
 
             if self.winning_move(self.current_player):
-                messagebox.showinfo("Game Over", f"Player {self.current_player} wins!")
-                self.reset_game()
+                self.score[self.current_player] += 1
+                messagebox.showinfo("Round Over", f"Player {self.current_player} wins round {self.rounds}!")
+                self.next_round()
             elif self.is_board_full():
-                messagebox.showinfo("Game Over", "It's a tie!")
-                self.reset_game()
+                messagebox.showinfo("Round Over", f"It's a tie in round {self.rounds}!")
+                self.next_round()
             else:
                 self.current_player = PLAYER2 if self.current_player == PLAYER1 else PLAYER1
 
@@ -105,14 +127,27 @@ class ConnectFour:
 
     def reset_game(self):
         self.board = self.create_board()
+        self.move_history.clear()  # Clear the move history
         self.update_board()
         self.current_player = PLAYER1
+
+    def next_round(self):
+        self.rounds += 1
+        self.reset_game()
+        self.round_label.config(text=f"Round: {self.rounds} | {PLAYER1}: {self.score[PLAYER1]} | {PLAYER2}: {self.score[PLAYER2]}")
+
+    def undo_move(self):
+        if self.move_history:
+            row, col, _ = self.move_history.pop()  # Get the last move
+            self.board[row][col] = EMPTY  # Remove the piece from the board
+            self.update_board()
+            self.current_player = PLAYER2 if self.current_player == PLAYER1 else PLAYER1  # Switch back to the previous player
 
     def on_resize(self, event):
         max_cell_size = 50  # Set a maximum size for each cell
         min_cell_size = 20  # Set a minimum size for each cell
 
-        new_width = min(self.frame.winfo_width() // COLS, max_cell_size)
+        new_width = min(self.frame.winfo_width() // (COLS + 2), max_cell_size)  # +2 for the undo button and round label
         new_height = min((self.frame.winfo_height() // (ROWS + 1)), max_cell_size)
         
         new_width = max(new_width, min_cell_size)
@@ -121,10 +156,10 @@ class ConnectFour:
         for row in range(ROWS):
             for col in range(COLS):
                 font_size = min(new_width // 2, 24)
-                self.labels[row][col].config(width=new_width//10, height=new_height//20, font=("Helvetica", font_size))
+                self.labels[row][col].config(width=new_width // 10, height=new_height // 20, font=("Helvetica", font_size))
 
         for button in self.buttons:
-            button.config(width=new_width//10, height=new_height//40, font=("Helvetica", min(new_width//3, 12)))
+            button.config(width=new_width // 10, height=new_height // 40, font=("Helvetica", min(new_width // 3, 12)))
 
 if __name__ == "__main__":
     root = tk.Tk()
