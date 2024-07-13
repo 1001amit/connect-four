@@ -19,6 +19,7 @@ class ConnectFour:
         self.rounds = 1
         self.score = {PLAYER1: 0, PLAYER2: 0}
         self.buttons = []
+        self.ai_mode = False  # Whether the game is in AI mode or not
         self.create_widgets()
         self.root.bind("<Configure>", self.on_resize)
 
@@ -71,6 +72,29 @@ class ConnectFour:
         for row in range(ROWS + 1):  # +1 for the row of buttons
             self.frame.grid_rowconfigure(row, weight=1)
 
+        self.show_mode_selection()
+
+    def show_mode_selection(self):
+        self.mode_selection_frame = tk.Frame(self.root)
+        self.mode_selection_frame.pack(fill=tk.BOTH, expand=True)
+
+        label = tk.Label(self.mode_selection_frame, text="Select Mode", font=("Helvetica", 16))
+        label.pack(pady=20)
+
+        two_player_button = tk.Button(self.mode_selection_frame, text="2 Player Mode", command=self.start_two_player_mode)
+        two_player_button.pack(pady=10)
+
+        ai_button = tk.Button(self.mode_selection_frame, text="Play Against AI", command=self.start_ai_mode)
+        ai_button.pack(pady=10)
+
+    def start_two_player_mode(self):
+        self.mode_selection_frame.destroy()
+        self.ai_mode = False
+
+    def start_ai_mode(self):
+        self.mode_selection_frame.destroy()
+        self.ai_mode = True
+
     def handle_click(self, col):
         if self.is_valid_location(col):
             row = self.get_next_open_row(col)
@@ -87,7 +111,7 @@ class ConnectFour:
                 self.next_round()
             else:
                 self.current_player = PLAYER2 if self.current_player == PLAYER1 else PLAYER1
-                if self.current_player == PLAYER2:
+                if self.ai_mode and self.current_player == PLAYER2:
                     self.root.after(500, self.ai_move)  # AI makes a move after 500ms delay
 
     def ai_move(self):
@@ -178,13 +202,13 @@ class ConnectFour:
             row, col, _ = self.move_history.pop()  # Get the last move
             self.board[row][col] = EMPTY  # Remove the piece from the board
             self.update_board()
-            self.current_player = PLAYER2 if self.current_player == PLAYER1 else PLAYER1  # Switch back to the previous player
+            self.current_player = PLAYER2 if self.current_player == PLAYER1 else PLAYER1  # Switch back the player
 
     def on_resize(self, event):
         max_cell_size = 50  # Set a maximum size for each cell
         min_cell_size = 20  # Set a minimum size for each cell
 
-        new_width = min(self.frame.winfo_width() // (COLS + 2), max_cell_size)  # +2 for the undo button and round label
+        new_width = min(self.frame.winfo_width() // COLS, max_cell_size)
         new_height = min((self.frame.winfo_height() // (ROWS + 1)), max_cell_size)
         
         new_width = max(new_width, min_cell_size)
@@ -202,3 +226,4 @@ if __name__ == "__main__":
     root = tk.Tk()
     game = ConnectFour(root)
     root.mainloop()
+
