@@ -21,6 +21,7 @@ class ConnectFour:
         self.buttons = []
         self.ai_mode = False  # Whether the game is in AI mode or not
         self.create_widgets()
+        self.create_menu()
         self.root.bind("<Configure>", self.on_resize)
 
         # Bind keyboard keys for column selection
@@ -72,28 +73,28 @@ class ConnectFour:
         for row in range(ROWS + 1):  # +1 for the row of buttons
             self.frame.grid_rowconfigure(row, weight=1)
 
-        self.show_mode_selection()
+    def create_menu(self):
+        self.menubar = tk.Menu(self.root)
+        self.root.config(menu=self.menubar)
 
-    def show_mode_selection(self):
-        self.mode_selection_frame = tk.Frame(self.root)
-        self.mode_selection_frame.pack(fill=tk.BOTH, expand=True)
-
-        label = tk.Label(self.mode_selection_frame, text="Select Mode", font=("Helvetica", 16))
-        label.pack(pady=20)
-
-        two_player_button = tk.Button(self.mode_selection_frame, text="2 Player Mode", command=self.start_two_player_mode)
-        two_player_button.pack(pady=10)
-
-        ai_button = tk.Button(self.mode_selection_frame, text="Play Against AI", command=self.start_ai_mode)
-        ai_button.pack(pady=10)
+        self.mode_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="Mode", menu=self.mode_menu)
+        self.mode_menu.add_command(label="2 Player Mode", command=self.start_two_player_mode)
+        self.mode_menu.add_command(label="Play Against AI", command=self.start_ai_mode)
 
     def start_two_player_mode(self):
-        self.mode_selection_frame.destroy()
         self.ai_mode = False
+        self.reset_game()
+        self.update_mode_label()
 
     def start_ai_mode(self):
-        self.mode_selection_frame.destroy()
         self.ai_mode = True
+        self.reset_game()
+        self.update_mode_label()
+
+    def update_mode_label(self):
+        mode = "AI Mode" if self.ai_mode else "2 Player Mode"
+        self.round_label.config(text=f"Mode: {mode} | Round: {self.rounds} | {PLAYER1}: {self.score[PLAYER1]} | {PLAYER2}: {self.score[PLAYER2]}")
 
     def handle_click(self, col):
         if self.is_valid_location(col):
@@ -195,14 +196,14 @@ class ConnectFour:
     def next_round(self):
         self.rounds += 1
         self.reset_game()
-        self.round_label.config(text=f"Round: {self.rounds} | {PLAYER1}: {self.score[PLAYER1]} | {PLAYER2}: {self.score[PLAYER2]}")
+        self.update_mode_label()
 
     def undo_move(self):
         if self.move_history:
-            row, col, _ = self.move_history.pop()  # Get the last move
-            self.board[row][col] = EMPTY  # Remove the piece from the board
+            row, col, player = self.move_history.pop()
+            self.board[row][col] = EMPTY
             self.update_board()
-            self.current_player = PLAYER2 if self.current_player == PLAYER1 else PLAYER1  # Switch back the player
+            self.current_player = player  # Switch back the player
 
     def on_resize(self, event):
         max_cell_size = 50  # Set a maximum size for each cell
@@ -226,4 +227,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     game = ConnectFour(root)
     root.mainloop()
-
