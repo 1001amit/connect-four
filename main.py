@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import random
+import numpy as np
 
 ROWS = 6
 COLS = 7
@@ -19,6 +20,7 @@ class ConnectFour:
         self.score = {PLAYER1: 0, PLAYER2: 0}
         self.buttons = []
         self.ai_mode = False
+        self.ai_difficulty = 'easy'
         self.create_widgets()
         self.create_menu()
         self.root.bind("<Configure>", self.on_resize)
@@ -31,7 +33,7 @@ class ConnectFour:
         self.root.bind("7", lambda event: self.handle_click(6))
 
     def create_board(self):
-        return [[EMPTY for _ in range(COLS)] for _ in range(ROWS)]
+        return np.array([[EMPTY for _ in range(COLS)] for _ in range(ROWS)])
 
     def create_widgets(self):
         self.frame = tk.Frame(self.root, bg="lightblue")
@@ -68,6 +70,16 @@ class ConnectFour:
         self.mode_menu.add_command(label="Play Against AI", command=self.start_ai_mode)
         self.menubar.add_command(label="Undo", command=self.undo_move)
 
+        self.difficulty_menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="Difficulty", menu=self.difficulty_menu)
+        self.difficulty_menu.add_command(label="Easy", command=lambda: self.set_ai_difficulty('easy'))
+        self.difficulty_menu.add_command(label="Medium", command=lambda: self.set_ai_difficulty('medium'))
+        self.difficulty_menu.add_command(label="Hard", command=lambda: self.set_ai_difficulty('hard'))
+
+    def set_ai_difficulty(self, difficulty):
+        self.ai_difficulty = difficulty
+        self.update_mode_label()
+
     def start_two_player_mode(self):
         self.ai_mode = False
         self.reset_game()
@@ -80,7 +92,8 @@ class ConnectFour:
 
     def update_mode_label(self):
         mode = "AI Mode" if self.ai_mode else "2 Player Mode"
-        self.round_label.config(text=f"Mode: {mode} | Round: {self.rounds} | {PLAYER1}: {self.score[PLAYER1]} | {PLAYER2}: {self.score[PLAYER2]}")
+        difficulty = f" | Difficulty: {self.ai_difficulty.capitalize()}" if self.ai_mode else ""
+        self.round_label.config(text=f"Mode: {mode}{difficulty} | Round: {self.rounds} | {PLAYER1}: {self.score[PLAYER1]} | {PLAYER2}: {self.score[PLAYER2]}")
 
     def handle_click(self, col):
         if self.is_valid_location(col):
@@ -106,24 +119,70 @@ class ConnectFour:
             self.handle_click(col)
 
     def find_best_move(self):
-        for col in range(COLS):
-            if self.is_valid_location(col):
-                row = self.get_next_open_row(col)
-                self.drop_piece(row, col, PLAYER2)
-                if self.winning_move(PLAYER2):
+        if self.ai_difficulty == 'easy':
+            valid_columns = [col for col in range(COLS) if self.is_valid_location(col)]
+            return random.choice(valid_columns) if valid_columns else None
+        elif self.ai_difficulty == 'medium':
+            for col in range(COLS):
+                if self.is_valid_location(col):
+                    row = self.get_next_open_row(col)
+                    self.drop_piece(row, col, PLAYER2)
+                    if self.winning_move(PLAYER2):
+                        self.board[row][col] = EMPTY
+                        return col
                     self.board[row][col] = EMPTY
-                    return col
-                self.board[row][col] = EMPTY
-        for col in range(COLS):
-            if self.is_valid_location(col):
-                row = self.get_next_open_row(col)
-                self.drop_piece(row, col, PLAYER1)
-                if self.winning_move(PLAYER1):
+            for col in range(COLS):
+                if self.is_valid_location(col):
+                    row = self.get_next_open_row(col)
+                    self.drop_piece(row, col, PLAYER1)
+                    if self.winning_move(PLAYER1):
+                        self.board[row][col] = EMPTY
+                        return col
                     self.board[row][col] = EMPTY
-                    return col
-                self.board[row][col] = EMPTY
-        valid_columns = [col for col in range(COLS) if self.is_valid_location(col)]
-        return random.choice(valid_columns) if valid_columns else None
+            valid_columns = [col for col in range(COLS) if self.is_valid_location(col)]
+            return random.choice(valid_columns) if valid_columns else None
+        elif self.ai_difficulty == 'hard':
+            best_score = float('-inf')
+            best_col = None
+            for col in range(COLS):
+                if self.is_valid_location(col):
+                    row = self.get_next_open_row(col)
+                    self.drop_piece(row, col, PLAYER2)
+                    score = self.minimax(self.board, 4, False)
+                    self.board[row][col] = EMPTY
+                    if score > best_score:
+                        best_score = score
+                        best_col = col
+            return best_col
+
+    def minimax(self, board, depth, is_maximizing):
+        if self.winning_move(PLAYER2):
+            return 100000000000000
+        elif self.winning_move(PLAYER1):
+            return -10000000000000
+        elif self.is_board_full() or depth == 0:
+            return 0
+
+        if is_maximizing:
+            best_score = float('-inf')
+            for col in range(COLS):
+                if self.is_valid_location(col):
+                    row = self.get_next_open_row(col)
+                    self.drop_piece(row, col, PLAYER2)
+                    score = self.minimax(board, depth - 1, False)
+                    self.board[row][col] = EMPTY
+                    best_score = max(best_score, score)
+            return best_score
+        else:
+            best_score = float('inf')
+            for col in range(COLS):
+                if self.is_valid_location(col):
+                    row = self.get_next_open_row(col)
+                    self.drop_piece(row, col, PLAYER1)
+                    score = self.minimax(board, depth - 1, True)
+                    self.board[row][col] = EMPTY
+                    best_score = min(best_score, score)
+            return best_score
 
     def is_valid_location(self, col):
         return self.board[0][col] == EMPTY
